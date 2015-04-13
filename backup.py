@@ -18,7 +18,7 @@ A. Maslennikov
 
 d = 5 # log rotate depth
 dest_dir = yaml.load(open("backup_cfg.yml"))["dest_dir"] # remote dir
-print "\n--- ", time.strftime("%A, %d. %B %Y %H:%M")
+print "\nStarting... \n--- ", time.strftime("%A, %d. %B %Y %H:%M")
 
 states = "backup.yml" # Store files hashes and modify times
 bk = open(states)
@@ -62,6 +62,12 @@ def xz(file, local_dir):
     print "xz %s \n" % (file,)
 
 result = ""
+template = '''%s:
+    path: %s
+    utime: %s
+    mtime: %s
+    md5: %s
+'''
 for fn in f:
     fname = fn.strip()
     fl = os.path.basename(fname)  
@@ -78,30 +84,23 @@ for fn in f:
         m = hashlib.md5()
         m.update(content)
         h = m.hexdigest()
-    else:
-        print fname, "- Not exist!"
-        sys.exit(0)
-
-    if (fl in file_dat.keys() ):
-        print fl
-        if ( file_dat[fl]["utime"] < t ):
-            print "time:", file_dat[fl]["mtime"], "->", tm
-        if ( file_dat[fl]["md5"] != h ):
-            print "md5:", file_dat[fl]["md5"], "->", h
-            logrotate(fl, d)
-            xz(fl, path)
+        if (fl in file_dat.keys() ):
+            print fl
+            if ( file_dat[fl]["utime"] < t ):
+                print "time:", file_dat[fl]["mtime"], "->", tm
+                #print "time:", file_dat[fl]["utime"], "->", t
+            if ( file_dat[fl]["md5"] != h ):
+                print "md5:", file_dat[fl]["md5"], "->", h
+                logrotate(fl, d)
+                xz(fl, path)
+            else:
+                print "ok!\n"
         else:
-            print "ok!\n"
+            xz(fl, path)
+        result = result + template % (fl, path, t, tm, h)
     else:
-        xz(fl, path)
-    
-    template = '''%s:
-    path: %s
-    utime: %s
-    mtime: %s
-    md5: %s
-'''
-    result = result + template % (fl, path, t, tm, h)
+        print "Error: %s - Not exist!" % fname
+        #sys.exit(0)
 
 #print result
 dat = open(states, "w")
@@ -109,4 +108,5 @@ dat.writelines(result)
 dat.close()
 
 f.close()
+print "Done."
 raw_input()
