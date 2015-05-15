@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import os
+import shutil
 import sys
 import time
 import hashlib
@@ -17,10 +18,10 @@ A. Maslennikov
 '''
 
 d = 5 # log rotate depth
-dest_dir = yaml.load(open("backup_cfg.yml"))["dest_dir"] # remote dir
+dest_dir = yaml.load(open("backup_cfg.yml"))["dest_dir"] # config remote dir
 print "\nStarting... \n--- ", time.strftime("%A, %d. %B %Y %H:%M")
 
-states = "backup.yml" # Store files hashes and modify times
+states = "backup.yml" # store files hashes and modify times
 bk = open(states)
 file_dat = yaml.load(bk) 
 bk.close()
@@ -38,27 +39,25 @@ def logrotate(file, depth):
     for i in range(depth, 1, -1):
         old_remote_file1 = remote_file + old + str(i-1)
         old_remote_file2 = remote_file + old + str(i)
-        try: 
-            call(["mv", old_remote_file1, old_remote_file2])
-        except: # this is not work
-            print "No yet file", old_remote_file1
+        if os.path.exists(old_remote_file2):
+            os.remove(old_remote_file2)
+        if os.path.exists(old_remote_file1):
+            os.rename(old_remote_file1, old_remote_file2)
     old_remote_file = remote_file + old + str(1)
-    call(["mv", remote_file, old_remote_file])
-
+    os.rename(remote_file, old_remote_file)
 
 def xz(file, local_dir):
     '''
     xz and copy new files
     '''
-    local_file = local_dir + "/" + file
-    remote_file = dest_dir + file + ".xz"
+    local_file = os.path.join(local_dir, file)
 
     # xz
     call(["xz", "-kf", local_file])
    
     # cp new version
     xz_local_file = local_file + ".xz"
-    call(["cp", xz_local_file, remote_file])
+    shutil.copy2(xz_local_file, dest_dir)
     print "xz %s \n" % (file,)
 
 result = ""
@@ -86,9 +85,10 @@ for fn in f:
         h = m.hexdigest()
         if (fl in file_dat.keys() ):
             print fl
-            if ( file_dat[fl]["utime"] < t ):
+            if ( file_dat[fl]["utime"] < round(t,2) ): # t - should be round 2
                 print "time:", file_dat[fl]["mtime"], "->", tm
-                #print "time:", file_dat[fl]["utime"], "->", t
+                #print file_dat[fl]["utime"], type(file_dat[fl]["utime"]) 
+                #print t, type(t)
             if ( file_dat[fl]["md5"] != h ):
                 print "md5:", file_dat[fl]["md5"], "->", h
                 logrotate(fl, d)
