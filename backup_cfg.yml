@@ -1,0 +1,4 @@
+---
+dest_dir: "/cygdrive/c/Users/<path to destination folder name>"
+xz_path: "/cygdrive/c/Users/<path to xz binary>/xz.exe"
+rotate_depth: 2  # how many copies to keep
